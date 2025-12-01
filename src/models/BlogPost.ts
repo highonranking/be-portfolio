@@ -15,10 +15,10 @@ interface IContent {
 interface IBlogPost extends Document {
   title: string;
   slug: string;
-  excerpt: string;
-  content: IContent[];
-  thumbnail: string;
-  category: string;
+  excerpt?: string;
+  content: IContent[] | string;
+  thumbnail?: string;
+  category?: string;
   tags: string[];
   published: boolean;
   featured: boolean;
@@ -43,8 +43,8 @@ const contentSchema = new Schema<IContent>({
 const blogPostSchema = new Schema<IBlogPost>({
   title: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
-  excerpt: { type: String, required: true },
-  content: [contentSchema],
+  excerpt: { type: String, required: false },
+  content: { type: Schema.Types.Mixed, required: true },
   thumbnail: String,
   category: String,
   tags: [String],
@@ -54,6 +54,21 @@ const blogPostSchema = new Schema<IBlogPost>({
   likes: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+});
+
+// Pre-save middleware to auto-generate excerpt if not provided
+blogPostSchema.pre('save', function(next) {
+  if (!this.excerpt && typeof this.content === 'string') {
+    // Auto-generate excerpt from content (first 150 characters)
+    this.excerpt = this.content.substring(0, 150).trim() + '...';
+  } else if (!this.excerpt && Array.isArray(this.content)) {
+    // Extract text from structured content
+    const firstTextBlock = this.content.find(block => block.text);
+    if (firstTextBlock && firstTextBlock.text) {
+      this.excerpt = firstTextBlock.text.substring(0, 150).trim() + '...';
+    }
+  }
+  next();
 });
 
 export default mongoose.model<IBlogPost>('BlogPost', blogPostSchema);
