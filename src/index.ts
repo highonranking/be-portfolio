@@ -20,6 +20,7 @@ const allowedOrigins = [
   'http://localhost:3002',
   process.env.FRONTEND_URL || '',
   'https://be-frontend.vercel.app',
+  'https://www.abhinavdixit.com',
 ].filter(Boolean);
 
 const corsOptions: cors.CorsOptions = {
