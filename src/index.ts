@@ -14,19 +14,34 @@ const app = express();
 const PORT = process.env.PORT || 5050;
 
 // Middleware
-app.use(
-  cors({
-    origin: 'http://localhost:3000',
-    credentials: true,
-    optionsSuccessStatus: 200,
-  })
-);
-// Explicitly handle preflight OPTIONS requests for all routes
-app.options('*', cors({
-  origin: 'http://localhost:3000',
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  process.env.FRONTEND_URL || '',
+  'https://be-frontend.vercel.app',
+].filter(Boolean);
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow server-to-server or curl (no origin)
+    if (!origin) return callback(null, true);
+    // Allow exact matches
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow any Vercel preview deployments for this project
+    const vercelPreview = /^https:\/\/.*\.vercel\.app$/i;
+    if (vercelPreview.test(origin)) return callback(null, true);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
   credentials: true,
   optionsSuccessStatus: 200,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+// Explicitly handle preflight OPTIONS requests for all routes
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
