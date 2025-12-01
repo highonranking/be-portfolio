@@ -5,7 +5,7 @@ import { slugify } from '../utils/helpers';
 
 export const createBlogPost = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, excerpt, content, thumbnail, category, tags } = req.body;
+    const { title, excerpt, content, thumbnail, category, tags, published, featured } = req.body;
 
     const slug = slugify(title);
     const existingPost = await BlogPost.findOne({ slug });
@@ -21,6 +21,8 @@ export const createBlogPost = async (req: AuthRequest, res: Response) => {
       thumbnail,
       category,
       tags,
+      published: published || false,
+      featured: featured || false,
     });
 
     await blogPost.save();
