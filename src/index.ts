@@ -8,6 +8,8 @@ import blogRoutes from './routes/blogRoutes';
 import externalContentRoutes from './routes/externalContentRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
 import versionRoutes from './routes/versionRoutes';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
@@ -53,6 +55,19 @@ app.use('/api/blogs', blogRoutes);
 app.use('/api/external', externalContentRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/version', versionRoutes);
+
+// Fallback inline version endpoint (in case routing file isn't picked up in some builds)
+app.get('/api/version', async (req, res) => {
+  try {
+    // Try reading package version
+    const pkgPath = path.join(__dirname, '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const appVersion = pkg.version ? `v${pkg.version}` : 'v1.0.0';
+    res.json({ tag: appVersion, name: appVersion, source: 'package.json' });
+  } catch (e) {
+    res.status(200).json({ tag: 'v1.0.0', name: 'v1.0.0', source: 'fallback' });
+  }
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
