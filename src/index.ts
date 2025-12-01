@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes';
 import blogRoutes from './routes/blogRoutes';
 import externalContentRoutes from './routes/externalContentRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
+import versionRoutes from './routes/versionRoutes';
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/external', externalContentRoutes);
 app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/version', versionRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
