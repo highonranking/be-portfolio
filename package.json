@@ -11,7 +11,8 @@
     "seed": "ts-node src/scripts/seedData.ts",
     "sync:github": "ts-node src/scripts/syncGithub.ts",
     "sync:linkedin": "ts-node src/scripts/syncLinkedIn.ts",
-    "add:linkedin": "ts-node src/scripts/addLinkedInPosts.ts"
+    "add:linkedin": "ts-node src/scripts/addLinkedInPosts.ts",
+    "version:bump": "node scripts/increment-version.js"
   },
   "keywords": [],
   "author": "",
