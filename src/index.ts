@@ -8,6 +8,7 @@ import blogRoutes from './routes/blogRoutes';
 import externalContentRoutes from './routes/externalContentRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
 import versionRoutes from './routes/versionRoutes';
+import { apiLimiter } from './middleware/rateLimiter';
 import fs from 'fs';
 import path from 'path';
 
@@ -46,6 +47,8 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 // Explicitly handle preflight OPTIONS requests for all routes
 app.options('*', cors(corsOptions));
+// Apply rate limiter to all API routes
+app.use('/api', apiLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
