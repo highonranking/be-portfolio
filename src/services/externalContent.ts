@@ -86,59 +86,65 @@ export class ExternalContentService {
         return;
       }
 
-      console.log(`Attempting to fetch LinkedIn posts for: ${linkedinUsername}`);
-
-      // Try different endpoint variations
-      try {
-        // Method 1: Try get-profile-posts endpoint
-        const response = await axios.get(
-          `https://linkedin-data-api.p.rapidapi.com/get-profile-posts`,
-          {
-            headers: {
-              'x-rapidapi-host': 'linkedin-data-api.p.rapidapi.com',
-              'x-rapidapi-key': rapidApiKey,
-            },
-            params: { 
-              username: linkedinUsername 
-            },
+      console.log(`Attempting to fetch ALL LinkedIn posts for: ${linkedinUsername}`);
+      let page = 1;
+      let totalFetched = 0;
+      let keepFetching = true;
+      while (keepFetching) {
+        try {
+          const response = await axios.get(
+            `https://linkedin-scraper-api-real-time-fast-affordable.p.rapidapi.com/profile/posts`,
+            {
+              headers: {
+                'x-rapidapi-host': 'linkedin-scraper-api-real-time-fast-affordable.p.rapidapi.com',
+                'x-rapidapi-key': rapidApiKey,
+              },
+              params: {
+                username: linkedinUsername,
+                page_number: page,
+              },
+            }
+          );
+          const posts = response.data.data || response.data.posts || response.data || [];
+          if (!Array.isArray(posts) || posts.length === 0) {
+            keepFetching = false;
+            break;
           }
-        );
-
-        console.log('API Response:', JSON.stringify(response.data).substring(0, 500));
-
-        const posts = response.data.data || response.data.posts || response.data || [];
-
-        if (Array.isArray(posts) && posts.length > 0) {
-          for (const post of posts.slice(0, 20)) {
-            const postId = post.urn || post.id || post.postUrl || Math.random().toString();
+          for (const post of posts) {
+            const postId = post.id || post.urn || post.postUrl || Math.random().toString();
             const existingContent = await ExternalContent.findOne({
               type: 'linkedin',
               sourceId: postId,
             });
-
+            // Use direct LinkedIn post URL if available
+            let postUrl = post.url || post.postUrl;
+            if (!postUrl && post.id) {
+              postUrl = `https://www.linkedin.com/feed/update/${post.id}`;
+            }
             if (!existingContent) {
               await ExternalContent.create({
                 type: 'linkedin',
                 sourceId: postId,
                 title: (post.text || post.commentary || post.title || '').substring(0, 100) || 'LinkedIn Post',
                 description: post.text || post.commentary || post.description || '',
-                url: post.postUrl || post.url || `https://linkedin.com/in/${linkedinUsername}`,
+                url: postUrl || `https://linkedin.com/in/${linkedinUsername}`,
                 imageUrl: post.images?.[0] || post.image || '',
                 publishedAt: new Date(post.postedAt || post.time || post.createdAt || Date.now()),
                 metadata: post,
                 lastSyncedAt: new Date(),
               });
             }
+            totalFetched++;
           }
-
-          console.log(`Synced ${posts.length} LinkedIn posts`);
-        } else {
-          console.log('No posts found in response. Response structure:', Object.keys(response.data));
+          // If less than a full page, stop fetching
+          if (posts.length < 10) keepFetching = false;
+          else page++;
+        } catch (apiError: any) {
+          console.error('LinkedIn API Error:', apiError.response?.data || apiError.message);
+          keepFetching = false;
         }
-      } catch (apiError: any) {
-        console.error('LinkedIn API Error:', apiError.response?.data || apiError.message);
-        console.log('Try accessing LinkedIn manually or use a different API endpoint');
       }
+      console.log(`Synced ${totalFetched} LinkedIn posts.`);
     } catch (error: any) {
       console.error('Error syncing LinkedIn posts:', error.response?.data || error.message);
     }
