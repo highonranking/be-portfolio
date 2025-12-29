@@ -42,13 +42,13 @@ const contentSchema = new Schema<IContent>({
 
 const blogPostSchema = new Schema<IBlogPost>({
   title: { type: String, required: true },
-  slug: { type: String, required: true, unique: true },
+  slug: { type: String, required: true, unique: true, index: true },
   excerpt: { type: String, required: false },
   content: { type: Schema.Types.Mixed, required: true },
   thumbnail: String,
-  category: String,
+  category: { type: String, index: true },
   tags: [String],
-  published: { type: Boolean, default: false },
+  published: { type: Boolean, default: false, index: true },
   featured: { type: Boolean, default: false },
   views: { type: Number, default: 0 },
   likes: { type: Number, default: 0 },

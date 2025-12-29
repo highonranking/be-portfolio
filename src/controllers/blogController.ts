@@ -34,29 +34,43 @@ export const createBlogPost = async (req: AuthRequest, res: Response) => {
 
 export const getBlogPosts = async (req: AuthRequest, res: Response) => {
   try {
-    const { published, featured, category, limit = 10, skip = 0 } = req.query;
+    let { published, featured, category, limit = 10, skip = 0 } = req.query;
     const filter: any = {};
 
-    if (published) filter.published = published === 'true';
-    if (featured) filter.featured = featured === 'true';
+    // Sanitize and validate query params
+    limit = Math.max(1, Math.min(Number(limit) || 10, 20)); // Enforce 1 <= limit <= 20
+    skip = Math.max(0, Number(skip) || 0);
+    if (published !== undefined) filter.published = published === 'true';
+    if (featured !== undefined) filter.featured = featured === 'true';
     if (category) filter.category = category;
 
+    // Logging request
+    console.info('[getBlogPosts] Query:', { filter, limit, skip });
+
+    // Only select metadata fields for list (not full content)
     const posts = await BlogPost.find(filter)
       .sort({ createdAt: -1 })
-      .limit(Number(limit))
-      .skip(Number(skip));
+      .limit(limit)
+      .skip(skip)
+      .select('title slug excerpt thumbnail category tags published featured views likes createdAt updatedAt')
+      .lean();
 
     const total = await BlogPost.countDocuments(filter);
+
+    // Logging response size
+    console.info('[getBlogPosts] Returned:', { count: posts.length, total });
 
     res.json({
       data: posts,
       pagination: {
         total,
-        limit: Number(limit),
-        skip: Number(skip),
+        limit,
+        skip,
       },
     });
   } catch (error: any) {
+    // Log error
+    console.error('[getBlogPosts] Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
