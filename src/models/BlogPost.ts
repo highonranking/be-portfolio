@@ -58,14 +58,27 @@ const blogPostSchema = new Schema<IBlogPost>({
 
 // Pre-save middleware to auto-generate excerpt if not provided
 blogPostSchema.pre('save', function(next) {
-  if (!this.excerpt && typeof this.content === 'string') {
-    // Auto-generate excerpt from content (first 150 characters)
-    this.excerpt = this.content.substring(0, 150).trim() + '...';
-  } else if (!this.excerpt && Array.isArray(this.content)) {
-    // Extract text from structured content
-    const firstTextBlock = this.content.find(block => block.text);
-    if (firstTextBlock && firstTextBlock.text) {
-      this.excerpt = firstTextBlock.text.substring(0, 150).trim() + '...';
+  if (!this.excerpt) {
+    // Helper to recursively extract text from TipTap-like JSON
+    function extractText(node: any): string {
+      if (!node) return '';
+      if (typeof node === 'string') return node;
+      if (Array.isArray(node)) return node.map(extractText).join(' ');
+      if (typeof node === 'object' && node.text) return node.text;
+      if (typeof node === 'object' && node.content) return extractText(node.content);
+      return '';
+    }
+
+    let text = '';
+    if (typeof this.content === 'string') {
+      text = this.content;
+    } else if (Array.isArray(this.content)) {
+      text = this.content.map(extractText).join(' ');
+    } else if (this.content && typeof this.content === 'object') {
+      text = extractText(this.content);
+    }
+    if (text) {
+      this.excerpt = text.substring(0, 150).trim() + '...';
     }
   }
   next();
