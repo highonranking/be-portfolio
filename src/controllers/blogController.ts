@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import BlogPost from '../models/BlogPost';
+import { exportBlogsToJson } from '../../scripts/exportBlogsToJson';
 import { AuthRequest } from '../middleware/auth';
 import { slugify } from '../utils/helpers';
 
@@ -25,8 +26,10 @@ export const createBlogPost = async (req: AuthRequest, res: Response) => {
       featured: featured || false,
     });
 
-    await blogPost.save();
-    res.status(201).json({ message: 'Blog post created successfully', data: blogPost });
+  await blogPost.save();
+  // Trigger static blog export
+  await exportBlogsToJson();
+  res.status(201).json({ message: 'Blog post created successfully', data: blogPost });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -100,7 +103,9 @@ export const updateBlogPost = async (req: AuthRequest, res: Response) => {
       { new: true }
     );
 
-    res.json({ message: 'Blog post updated successfully', data: post });
+  // Trigger static blog export
+  await exportBlogsToJson();
+  res.json({ message: 'Blog post updated successfully', data: post });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -109,8 +114,10 @@ export const updateBlogPost = async (req: AuthRequest, res: Response) => {
 export const deleteBlogPost = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    await BlogPost.findByIdAndDelete(id);
-    res.json({ message: 'Blog post deleted successfully' });
+  await BlogPost.findByIdAndDelete(id);
+  // Trigger static blog export
+  await exportBlogsToJson();
+  res.json({ message: 'Blog post deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
