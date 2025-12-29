@@ -105,40 +105,46 @@ export class ExternalContentService {
               },
             }
           );
-          const posts = response.data.data || response.data.posts || response.data || [];
+          const posts = response.data.data?.posts || response.data.posts || response.data.data || response.data || [];
           if (!Array.isArray(posts) || posts.length === 0) {
             keepFetching = false;
             break;
           }
           for (const post of posts) {
-            const postId = post.id || post.urn || post.postUrl || Math.random().toString();
-            const existingContent = await ExternalContent.findOne({
-              type: 'linkedin',
-              sourceId: postId,
-            });
+            const postId = post.id || post.urn?.ugcPost_urn || post.urn?.activity_urn || post.full_urn || post.postUrl || Math.random().toString();
             // Use direct LinkedIn post URL if available
             let postUrl = post.url || post.postUrl;
-            if (!postUrl && post.id) {
-              postUrl = `https://www.linkedin.com/feed/update/${post.id}`;
+            if (!postUrl && post.full_urn && post.full_urn.startsWith('urn:li:ugcPost:')) {
+              postUrl = `https://www.linkedin.com/feed/update/${post.full_urn.replace('urn:li:ugcPost:', '')}`;
+            } else if (!postUrl && post.full_urn && post.full_urn.startsWith('urn:li:activity:')) {
+              postUrl = `https://www.linkedin.com/feed/update/${post.full_urn.replace('urn:li:activity:', '')}`;
             }
-            if (!existingContent) {
-              // Ensure publishedAt is always set and valid
-              let publishedAt = post.postedAt || post.time || post.createdAt || post.publishedAt;
-              if (!publishedAt || isNaN(new Date(publishedAt).getTime())) {
-                publishedAt = Date.now();
-              }
-              await ExternalContent.create({
-                type: 'linkedin',
-                sourceId: postId,
-                title: (post.text || post.commentary || post.title || '').substring(0, 100) || 'LinkedIn Post',
-                description: post.text || post.commentary || post.description || '',
-                url: postUrl || `https://linkedin.com/in/${linkedinUsername}`,
-                imageUrl: post.images?.[0] || post.image || '',
-                publishedAt: new Date(publishedAt),
-                metadata: post,
-                lastSyncedAt: new Date(),
-              });
+            // Ensure publishedAt is always set and valid
+            let publishedAt = post.posted_at?.date || post.postedAt || post.time || post.createdAt || post.publishedAt;
+            if (!publishedAt || isNaN(new Date(publishedAt).getTime())) {
+              publishedAt = Date.now();
             }
+            // Upsert: update if exists, else insert
+            await ExternalContent.findOneAndUpdate(
+              { type: 'linkedin', sourceId: postId },
+              {
+                $set: {
+                  title: (post.text || post.commentary || post.title || '').substring(0, 100) || 'LinkedIn Post',
+                  description: post.text || post.commentary || post.description || '',
+                  url: postUrl || `https://linkedin.com/in/${linkedinUsername}`,
+                  imageUrl: post.media?.images?.[0]?.url || post.media?.url || post.images?.[0] || post.image || '',
+                  publishedAt: new Date(publishedAt),
+                  metadata: post,
+                  lastSyncedAt: new Date(),
+                },
+                $setOnInsert: {
+                  type: 'linkedin',
+                  sourceId: postId,
+                  createdAt: new Date(),
+                },
+              },
+              { upsert: true, new: true }
+            );
             totalFetched++;
           }
           // If less than a full page, stop fetching

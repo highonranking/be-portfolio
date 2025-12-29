@@ -99,22 +99,21 @@ export const syncExternalContent = async (req: AuthRequest, res: Response) => {
     }
 
   let syncedLinkedInPosts: any[] = [];
-    if (type === 'linkedin' || type === 'all') {
-      if (linkedinProfileUrl) {
-        await ExternalContentService.syncLinkedInPosts(linkedinProfileUrl, rapidApiKey);
-        // Fetch the latest LinkedIn posts after sync
-        syncedLinkedInPosts = await (await import('../models/ExternalContent')).default.find({ type: 'linkedin' })
-          .sort({ publishedAt: -1 })
-          .limit(50)
-          .lean();
-      }
+  if (type === 'linkedin' || type === 'all') {
+    if (linkedinProfileUrl) {
+      await ExternalContentService.syncLinkedInPosts(linkedinProfileUrl, rapidApiKey);
+      // Always fetch the latest LinkedIn posts after sync (no limit)
+      syncedLinkedInPosts = await (await import('../models/ExternalContent')).default.find({ type: 'linkedin' })
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .lean();
     }
+  }
 
-    if (type === 'linkedin') {
-      res.json({ message: 'LinkedIn content synced successfully', data: syncedLinkedInPosts });
-    } else {
-      res.json({ message: 'External content synced successfully' });
-    }
+  if (type === 'linkedin') {
+    res.json({ message: 'LinkedIn content synced successfully', data: syncedLinkedInPosts });
+  } else {
+    res.json({ message: 'External content synced successfully' });
+  }
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
