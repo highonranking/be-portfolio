@@ -122,6 +122,11 @@ export class ExternalContentService {
               postUrl = `https://www.linkedin.com/feed/update/${post.id}`;
             }
             if (!existingContent) {
+              // Ensure publishedAt is always set and valid
+              let publishedAt = post.postedAt || post.time || post.createdAt || post.publishedAt;
+              if (!publishedAt || isNaN(new Date(publishedAt).getTime())) {
+                publishedAt = Date.now();
+              }
               await ExternalContent.create({
                 type: 'linkedin',
                 sourceId: postId,
@@ -129,7 +134,7 @@ export class ExternalContentService {
                 description: post.text || post.commentary || post.description || '',
                 url: postUrl || `https://linkedin.com/in/${linkedinUsername}`,
                 imageUrl: post.images?.[0] || post.image || '',
-                publishedAt: new Date(post.postedAt || post.time || post.createdAt || Date.now()),
+                publishedAt: new Date(publishedAt),
                 metadata: post,
                 lastSyncedAt: new Date(),
               });

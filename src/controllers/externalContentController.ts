@@ -55,8 +55,9 @@ export const getLinkedInPosts = async (req: AuthRequest, res: Response) => {
   try {
     const { limit = 10, skip = 0 } = req.query;
 
+    // Fallback: sort by publishedAt, then createdAt if publishedAt is missing
     const posts = await ExternalContent.find({ type: 'linkedin' })
-      .sort({ publishedAt: -1 })
+      .sort({ publishedAt: -1, createdAt: -1 })
       .limit(Number(limit))
       .skip(Number(skip));
 
